@@ -146,6 +146,14 @@ void CanHandler::onInit(){
   _base_odom_y_pub		    = _nh.advertise<std_msgs::Float32>("base/odom/y", 10);
   _base_odom_yaw_pub		    = _nh.advertise<std_msgs::Float32>("base/odom/yaw", 10);
 
+  for(int i=0;i < ALPHA;i++){
+    	pnh.param<int>("alpha" + std::to_string(i) , id_alpha[i], 0x010 + i);
+  }
+  for(int i=0;i < BETA;i++){
+    	pnh.param<int>("beta" + std::to_string(i) , id_beta[i], 0x110 + i);
+  }
+
+ 
   _can_rx_sub				    = _nh.subscribe<can_msgs::CanFrame>("can_rx", 10, &CanHandler::canRxCallback, this);
 	
   _alpha_cmd_sub			    = _nh.subscribe<std_msgs::UInt16>("alpha/cmd", 10 , &CanHandler::alphaCmdCallback, this);
@@ -172,14 +180,7 @@ void CanHandler::onInit(){
   _beta_motor8_cmd_vel_sub	= _nh.subscribe<std_msgs::Float64>("beta/motor8_cmd_vel", 10, &CanHandler::betamotor8CmdVelCallback, this);
   _beta_motor9_cmd_vel_sub	= _nh.subscribe<std_msgs::Float64>("beta/motor9_cmd_vel", 10, &CanHandler::betamotor9CmdVelCallback, this);
 
-  for(int i=0;i < ALPHA;i++){
-    	pnh.param<int>("alpha" + std::to_string(i) , id_alpha[i], 0x010 + i);
-  }
-  for(int i=0;i < BETA;i++){
-    	pnh.param<int>("beta" + std::to_string(i) , id_beta[i], 0x110 + i);
-  }
-
-  NODELET_INFO("can_handler has started.");
+ NODELET_INFO("can_handler has started.");
 }
 
 void CanHandler::alphaCmdCallback(const std_msgs::UInt16::ConstPtr& msg)
