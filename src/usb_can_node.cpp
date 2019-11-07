@@ -39,8 +39,11 @@ namespace can_plugins{
   class UsbCanNode : public nodelet::Nodelet
   {
   public:
-      virtual void onInit();
-  
+    virtual void onInit();
+    ~UsbCanNode()
+    {
+        if(!this->_stop)this->Dispose();
+    }
   private:
       ros::NodeHandle _nh;
       ros::NodeHandle nh_priv;
@@ -153,11 +156,6 @@ namespace can_plugins{
       this->send("\r");
   
       this->waitForStatus();
-      if(this->_status)
-      {
-          // couldn't care less about the status
-          //return true;
-      }
   
       NODELET_INFO("closing last session");
   
@@ -167,7 +165,6 @@ namespace can_plugins{
       this->waitForStatus();
       if(this->_status)
       {
-          // now i do
           return true;
       }
   
@@ -241,7 +238,6 @@ namespace can_plugins{
           return true;
       }
   
-      //_port->write_some(buffer("O\r", 2));
       this->send("O\r");
   
       this->waitForStatus();
@@ -263,7 +259,6 @@ namespace can_plugins{
           return true;
       }
   
-      //_port->write_some(buffer("C\r", 2));
       this->send("C\r");
       this->_is_open = false;
   
@@ -276,8 +271,6 @@ namespace can_plugins{
   
   bool UsbCanNode::SetBaudRate(const int baud)
   {
-      //string brspec;
-  
       if(!this->_port->is_open())
       {
           NODELET_ERROR("serial port is not open");
@@ -519,7 +512,7 @@ namespace can_plugins{
       }
       catch(std::exception &ex)
       {
-          ROS_WARN("an error occurred: %s", ex.what());
+          NODELET_WARN("an error occurred: %s", ex.what());
       }
   }
   
@@ -636,46 +629,35 @@ namespace can_plugins{
   
     //this->can_rx_thread = new std::thread(&UsbCanNode::canRxTask, this);
   
-  
-    //main
     NODELET_INFO("usb_can_node has started.");
   
-  
     NODELET_DEBUG("opening serial port...");
-    if(this->Open())
+    while(this->Open() && ros::ok())
     {
-        NODELET_ERROR("failed to open serial port");
-        exit(-1);
-    }
-    else
-    {
-        //NODELET_INFO("opened ");
+        NODELET_ERROR("failed to open serial port.retrying evert second");
+        ros::Duration(1).sleep();
     }
   
-    if(this->Initialize())
+    while(this->Initialize() && ros::ok())
     {
-        NODELET_ERROR("failed to initialize");
-        exit(-1);
+        NODELET_ERROR("failed to initialize.retrying evert second");
+        ros::Duration(1).sleep();
     }
   
     NODELET_INFO("initialized");
   
-    if(this->SetBaudRate(500000))
+    while(this->SetBaudRate(500000) && ros::ok())
     {
-        NODELET_ERROR("failed to set baud rate");
+        NODELET_ERROR("failed to set baud rate.retrying evert second");
+        ros::Duration(1).sleep();
     }
-    else
-    {
-        NODELET_INFO("baud rate set");
-    }
+
+    NODELET_INFO("baud rate set");
   
-    if(this->Start())
+    while(this->Start() && ros::ok())
     {
-        NODELET_ERROR("failed to start session");
-    }
-    else
-    {
-        //NODELET_INFO("baud rate set");
+        NODELET_ERROR("failed to start session.retrying evert second");
+        ros::Duration(1).sleep();
     }
   
     //usbCanNode->Dispose();
