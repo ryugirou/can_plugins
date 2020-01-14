@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<launch>
+ 
+
+  <node pkg="can_plugins" type="ping" name="ping">
+    <param name="ctrl_freq" value="1000"/>
+  </node> 
+
+  <node pkg="can_plugins" type="ping" name="ping2" output="screen">
+    <param name="ctrl_freq" value="1000"/>
+    <remap from="test_rx" to="test_tx"/>
+    <remap from="test_tx" to="test_rx"/>
+  </node>
+
+</launch>

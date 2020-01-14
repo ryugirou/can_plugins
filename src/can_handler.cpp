@@ -13,10 +13,9 @@
 
 #include <boost/array.hpp>
 
-#include <can_msgs/CanFrame.h>
+#include <can_msgs/Frame.h>
 
 #define CAN_MTU 8
-#define ALPHA 10
 #define BETA 10
 
 #include <stdint.h>
@@ -67,18 +66,6 @@ namespace can_plugins{
       virtual void onInit();
 
     private:
-      void alphaCmdCallback(const std_msgs::UInt16::ConstPtr& msg);
-      void alphamotor0CmdVelCallback(const std_msgs::Float64::ConstPtr& msg);
-      void alphamotor1CmdVelCallback(const std_msgs::Float64::ConstPtr& msg);
-      void alphamotor2CmdVelCallback(const std_msgs::Float64::ConstPtr& msg);
-      void alphamotor3CmdVelCallback(const std_msgs::Float64::ConstPtr& msg);
-      void alphamotor4CmdVelCallback(const std_msgs::Float64::ConstPtr& msg);
-      void alphamotor5CmdVelCallback(const std_msgs::Float64::ConstPtr& msg);
-      void alphamotor6CmdVelCallback(const std_msgs::Float64::ConstPtr& msg);
-      void alphamotor7CmdVelCallback(const std_msgs::Float64::ConstPtr& msg);
-      void alphamotor8CmdVelCallback(const std_msgs::Float64::ConstPtr& msg);
-      void alphamotor9CmdVelCallback(const std_msgs::Float64::ConstPtr& msg);
-
       void betaCmdCallback(const std_msgs::UInt8::ConstPtr& msg);
       void betamotor0CmdVelCallback(const std_msgs::Float64::ConstPtr& msg);    
       void betamotor1CmdVelCallback(const std_msgs::Float64::ConstPtr& msg);    
@@ -91,7 +78,11 @@ namespace can_plugins{
       void betamotor8CmdVelCallback(const std_msgs::Float64::ConstPtr& msg);    
       void betamotor9CmdVelCallback(const std_msgs::Float64::ConstPtr& msg);    
 
-      void canRxCallback(const can_msgs::CanFrame::ConstPtr &msg);
+      void solenoidOrderCallback(const std_msgs::UInt8::ConstPtr& msg);
+
+      void canRxCallback(const can_msgs::Frame::ConstPtr &msg);
+
+      void TestTxCallback(const std_msgs::UInt8::ConstPtr &msg);
 
       template<typename T>
         void sendData(const uint16_t id, const T data);
@@ -105,17 +96,8 @@ namespace can_plugins{
       ros::Publisher  _base_odom_y_pub;
       ros::Publisher  _base_odom_yaw_pub;
 
-      ros::Subscriber _alpha_cmd_sub;
-      ros::Subscriber _alpha_motor0_cmd_vel_sub;
-      ros::Subscriber _alpha_motor1_cmd_vel_sub;
-      ros::Subscriber _alpha_motor2_cmd_vel_sub;
-      ros::Subscriber _alpha_motor3_cmd_vel_sub;
-      ros::Subscriber _alpha_motor4_cmd_vel_sub;
-      ros::Subscriber _alpha_motor5_cmd_vel_sub;
-      ros::Subscriber _alpha_motor6_cmd_vel_sub;
-      ros::Subscriber _alpha_motor7_cmd_vel_sub;
-      ros::Subscriber _alpha_motor8_cmd_vel_sub;
-      ros::Subscriber _alpha_motor9_cmd_vel_sub;
+      ros::Publisher  _test_pub;
+      ros::Subscriber _test_sub;
 
       ros::Subscriber _beta_cmd_sub;
       ros::Subscriber _beta_motor0_cmd_vel_sub;
@@ -129,115 +111,52 @@ namespace can_plugins{
       ros::Subscriber _beta_motor8_cmd_vel_sub;
       ros::Subscriber _beta_motor9_cmd_vel_sub;
 
+      ros::Subscriber _solenoid_order_sub;
+
       static constexpr uint16_t id_baseOdomX              = 0x205;
       static constexpr uint16_t id_baseOdomY              = 0x206;
       static constexpr uint16_t id_baseOdomYaw            = 0x207;
-      int id_alpha[ALPHA];
+      static constexpr uint16_t id_solenoid            = 0x100;
+      static constexpr uint16_t id_test_tx=0x4b0;
+      static constexpr uint16_t id_test_rx=0x4b3;
+
       int id_beta[BETA];
   };
 
   void CanHandler::onInit(){
     _nh = getNodeHandle();
     pnh = getPrivateNodeHandle();
-    //constructor
-    _can_tx_pub				    = _nh.advertise<can_msgs::CanFrame>("can_tx", 10);
 
-    _base_odom_x_pub		    = _nh.advertise<std_msgs::Float32>("base/odom/x", 10);
-    _base_odom_y_pub		    = _nh.advertise<std_msgs::Float32>("base/odom/y", 10);
-    _base_odom_yaw_pub		    = _nh.advertise<std_msgs::Float32>("base/odom/yaw", 10);
-
-    for(int i=0;i < ALPHA;i++){
-      pnh.param<int>("alpha" + std::to_string(i) , id_alpha[i], 0x010 + i);
-    }
     for(int i=0;i < BETA;i++){
-      pnh.param<int>("beta" + std::to_string(i) , id_beta[i], 0x110 + i);
+      pnh.param<int>("beta" + std::to_string(i) , id_beta[i], 0x700 + i);
     }
 
+    _can_tx_pub				    = _nh.advertise<can_msgs::Frame>("can_tx", 1000);
 
-    _can_rx_sub				    = _nh.subscribe<can_msgs::CanFrame>("can_rx", 10, &CanHandler::canRxCallback, this);
+    _base_odom_x_pub		    = _nh.advertise<std_msgs::Float32>("base/odom/x", 1);
+    _base_odom_y_pub		    = _nh.advertise<std_msgs::Float32>("base/odom/y", 1);
+    _base_odom_yaw_pub		    = _nh.advertise<std_msgs::Float32>("base/odom/yaw", 1);
 
-    _alpha_cmd_sub			    = _nh.subscribe<std_msgs::UInt16>("alpha/cmd", 10 , &CanHandler::alphaCmdCallback, this);
-    _alpha_motor0_cmd_vel_sub	= _nh.subscribe<std_msgs::Float64>("alpha/motor0_cmd_vel", 10, &CanHandler::alphamotor0CmdVelCallback, this);
-    _alpha_motor1_cmd_vel_sub	= _nh.subscribe<std_msgs::Float64>("alpha/motor1_cmd_vel", 10, &CanHandler::alphamotor1CmdVelCallback, this);
-    _alpha_motor2_cmd_vel_sub	= _nh.subscribe<std_msgs::Float64>("alpha/motor2_cmd_vel", 10, &CanHandler::alphamotor2CmdVelCallback, this);
-    _alpha_motor3_cmd_vel_sub	= _nh.subscribe<std_msgs::Float64>("alpha/motor3_cmd_vel", 10, &CanHandler::alphamotor3CmdVelCallback, this);
-    _alpha_motor4_cmd_vel_sub	= _nh.subscribe<std_msgs::Float64>("alpha/motor4_cmd_vel", 10, &CanHandler::alphamotor4CmdVelCallback, this);
-    _alpha_motor5_cmd_vel_sub	= _nh.subscribe<std_msgs::Float64>("alpha/motor5_cmd_vel", 10, &CanHandler::alphamotor5CmdVelCallback, this);
-    _alpha_motor6_cmd_vel_sub	= _nh.subscribe<std_msgs::Float64>("alpha/motor6_cmd_vel", 10, &CanHandler::alphamotor6CmdVelCallback, this);
-    _alpha_motor7_cmd_vel_sub	= _nh.subscribe<std_msgs::Float64>("alpha/motor7_cmd_vel", 10, &CanHandler::alphamotor7CmdVelCallback, this);
-    _alpha_motor8_cmd_vel_sub	= _nh.subscribe<std_msgs::Float64>("alpha/motor8_cmd_vel", 10, &CanHandler::alphamotor8CmdVelCallback, this);
-    _alpha_motor9_cmd_vel_sub	= _nh.subscribe<std_msgs::Float64>("alpha/motor9_cmd_vel", 10, &CanHandler::alphamotor9CmdVelCallback, this);
+    _test_pub = _nh.advertise<std_msgs::UInt8>("test_rx",1000);
+    _test_sub = _nh.subscribe<std_msgs::UInt8>("test_tx",1000,&CanHandler::TestTxCallback,this);
+
+    _can_rx_sub				    = _nh.subscribe<can_msgs::Frame>("can_rx", 1000, &CanHandler::canRxCallback, this);
 
     _beta_cmd_sub	        = _nh.subscribe<std_msgs::UInt8>("beta/cmd", 10, &CanHandler::betaCmdCallback, this);
-    _beta_motor0_cmd_vel_sub	= _nh.subscribe<std_msgs::Float64>("beta/motor0_cmd_vel", 10, &CanHandler::betamotor0CmdVelCallback, this);
-    _beta_motor1_cmd_vel_sub	= _nh.subscribe<std_msgs::Float64>("beta/motor1_cmd_vel", 10, &CanHandler::betamotor1CmdVelCallback, this);
-    _beta_motor2_cmd_vel_sub	= _nh.subscribe<std_msgs::Float64>("beta/motor2_cmd_vel", 10, &CanHandler::betamotor2CmdVelCallback, this);
-    _beta_motor3_cmd_vel_sub	= _nh.subscribe<std_msgs::Float64>("beta/motor3_cmd_vel", 10, &CanHandler::betamotor3CmdVelCallback, this);
-    _beta_motor4_cmd_vel_sub	= _nh.subscribe<std_msgs::Float64>("beta/motor4_cmd_vel", 10, &CanHandler::betamotor4CmdVelCallback, this);
-    _beta_motor5_cmd_vel_sub	= _nh.subscribe<std_msgs::Float64>("beta/motor5_cmd_vel", 10, &CanHandler::betamotor5CmdVelCallback, this);
-    _beta_motor6_cmd_vel_sub	= _nh.subscribe<std_msgs::Float64>("beta/motor6_cmd_vel", 10, &CanHandler::betamotor6CmdVelCallback, this);
-    _beta_motor7_cmd_vel_sub	= _nh.subscribe<std_msgs::Float64>("beta/motor7_cmd_vel", 10, &CanHandler::betamotor7CmdVelCallback, this);
-    _beta_motor8_cmd_vel_sub	= _nh.subscribe<std_msgs::Float64>("beta/motor8_cmd_vel", 10, &CanHandler::betamotor8CmdVelCallback, this);
-    _beta_motor9_cmd_vel_sub	= _nh.subscribe<std_msgs::Float64>("beta/motor9_cmd_vel", 10, &CanHandler::betamotor9CmdVelCallback, this);
+    _beta_motor0_cmd_vel_sub	= _nh.subscribe<std_msgs::Float64>("beta/motor0_cmd_vel", 1, &CanHandler::betamotor0CmdVelCallback, this);
+    _beta_motor1_cmd_vel_sub	= _nh.subscribe<std_msgs::Float64>("beta/motor1_cmd_vel", 1, &CanHandler::betamotor1CmdVelCallback, this);
+    _beta_motor2_cmd_vel_sub	= _nh.subscribe<std_msgs::Float64>("beta/motor2_cmd_vel", 1, &CanHandler::betamotor2CmdVelCallback, this);
+    _beta_motor3_cmd_vel_sub	= _nh.subscribe<std_msgs::Float64>("beta/motor3_cmd_vel", 1, &CanHandler::betamotor3CmdVelCallback, this);
+    _beta_motor4_cmd_vel_sub	= _nh.subscribe<std_msgs::Float64>("beta/motor4_cmd_vel", 1000, &CanHandler::betamotor4CmdVelCallback, this);
+    _beta_motor5_cmd_vel_sub	= _nh.subscribe<std_msgs::Float64>("beta/motor5_cmd_vel", 1000, &CanHandler::betamotor5CmdVelCallback, this);
+    _beta_motor6_cmd_vel_sub	= _nh.subscribe<std_msgs::Float64>("beta/motor6_cmd_vel", 1000, &CanHandler::betamotor6CmdVelCallback, this);
+    _beta_motor7_cmd_vel_sub	= _nh.subscribe<std_msgs::Float64>("beta/motor7_cmd_vel", 1000, &CanHandler::betamotor7CmdVelCallback, this);
+    _beta_motor8_cmd_vel_sub	= _nh.subscribe<std_msgs::Float64>("beta/motor8_cmd_vel", 1000, &CanHandler::betamotor8CmdVelCallback, this);
+    _beta_motor9_cmd_vel_sub	= _nh.subscribe<std_msgs::Float64>("beta/motor9_cmd_vel", 1000, &CanHandler::betamotor9CmdVelCallback, this);
+
+    _solenoid_order_sub = _nh.subscribe<std_msgs::UInt8>("solenoid", 1000, &CanHandler::solenoidOrderCallback, this);
 
     NODELET_INFO("can_handler has started.");
-  }
-
-  void CanHandler::alphaCmdCallback(const std_msgs::UInt16::ConstPtr& msg)
-  {
-    for(int i=0;i < ALPHA;i++){
-      this->sendData(id_alpha[i], msg->data);
-    }
-  }
-
-  void CanHandler::alphamotor0CmdVelCallback(const std_msgs::Float64::ConstPtr& msg)
-  {
-    this->sendData(id_alpha[0]+1, msg->data);
-  }
-
-  void CanHandler::alphamotor1CmdVelCallback(const std_msgs::Float64::ConstPtr& msg)
-  {
-    this->sendData(id_alpha[1]+1, msg->data);
-  }
-
-  void CanHandler::alphamotor2CmdVelCallback(const std_msgs::Float64::ConstPtr& msg)
-  {
-    this->sendData(id_alpha[2]+1, msg->data);
-  }
-
-  void CanHandler::alphamotor3CmdVelCallback(const std_msgs::Float64::ConstPtr& msg)
-  {
-    this->sendData(id_alpha[3]+1, msg->data);
-  }
-
-  void CanHandler::alphamotor4CmdVelCallback(const std_msgs::Float64::ConstPtr& msg)
-  {
-    this->sendData(id_alpha[4]+1, msg->data);
-  }
-
-  void CanHandler::alphamotor5CmdVelCallback(const std_msgs::Float64::ConstPtr& msg)
-  {
-    this->sendData(id_alpha[5]+1, msg->data);
-  }
-
-  void CanHandler::alphamotor6CmdVelCallback(const std_msgs::Float64::ConstPtr& msg)
-  {
-    this->sendData(id_alpha[6]+1, msg->data);
-  }
-
-  void CanHandler::alphamotor7CmdVelCallback(const std_msgs::Float64::ConstPtr& msg)
-  {
-    this->sendData(id_alpha[7]+1, msg->data);
-  }
-
-  void CanHandler::alphamotor8CmdVelCallback(const std_msgs::Float64::ConstPtr& msg)
-  {
-    this->sendData(id_alpha[8]+1, msg->data);
-  }
-
-  void CanHandler::alphamotor9CmdVelCallback(const std_msgs::Float64::ConstPtr& msg)
-  {
-    this->sendData(id_alpha[9]+1, msg->data);
   }
 
   void CanHandler::betaCmdCallback(const std_msgs::UInt8::ConstPtr& msg)
@@ -245,6 +164,7 @@ namespace can_plugins{
     for(int i=0;i < BETA;i++){
       this->sendData(id_beta[i], msg->data);
     }
+    this->sendData(id_solenoid, msg->data);
   }
 
   void CanHandler::betamotor0CmdVelCallback(const std_msgs::Float64::ConstPtr& msg)
@@ -297,11 +217,23 @@ namespace can_plugins{
     this->sendData(id_beta[9]+1, (float)(msg->data));
   }
 
-  void CanHandler::canRxCallback(const can_msgs::CanFrame::ConstPtr &msg)
+  void CanHandler::solenoidOrderCallback(const std_msgs::UInt8::ConstPtr& msg)
+  {
+    this->sendData(id_solenoid+1, msg->data);
+  }
+
+  void CanHandler::TestTxCallback(const std_msgs::UInt8::ConstPtr &msg)
+  {
+    this->sendData(id_test_tx,msg->data);
+  }
+
+  void CanHandler::canRxCallback(const can_msgs::Frame::ConstPtr &msg)
   {
     std_msgs::Float32 _base_odom_x_msg;
     std_msgs::Float32 _base_odom_y_msg;
     std_msgs::Float32 _base_odom_yaw_msg;
+
+    std_msgs::UInt8 _test_msg;
 
     switch(msg->id)
     {
@@ -320,6 +252,10 @@ namespace can_plugins{
         _base_odom_yaw_pub.publish(_base_odom_yaw_msg);
         break;
 
+      case id_test_rx:
+        can_unpack(msg->data, _test_msg.data);
+        _test_pub.publish(_test_msg);
+        break;
       default:
         break;
     }
@@ -328,7 +264,7 @@ namespace can_plugins{
   template<typename T>
     void CanHandler::sendData(const uint16_t id, const T data)
     {
-      can_msgs::CanFrame frame;
+      can_msgs::Frame frame;
       frame.id = id;
       frame.is_rtr = false;
       frame.is_extended = false;

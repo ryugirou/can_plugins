@@ -17,7 +17,7 @@
 #include <boost/asio.hpp>
 #include <boost/thread.hpp>
 
-#include <can_msgs/CanFrame.h>
+#include <can_msgs/Frame.h>
 
 #include <nodelet/nodelet.h>
 #include <pluginlib/class_list_macros.h>
@@ -53,7 +53,7 @@ namespace can_plugins{
       void canRxTask(void);
       void processRxFrame(const uint8_t * const str_buf, const uint16_t str_len);
   
-      void canTxCallback(const can_msgs::CanFrame::ConstPtr &msg);
+      void canTxCallback(const can_msgs::Frame::ConstPtr &msg);
   
       // return true if aborted
       // return false on success
@@ -82,7 +82,7 @@ namespace can_plugins{
   
   
   
-      can_msgs::CanFrame can_rx_msg;
+      can_msgs::Frame can_rx_msg;
       ros::Publisher can_rx_pub;
       ros::Subscriber can_tx_sub;
   
@@ -424,10 +424,11 @@ namespace can_plugins{
   
       // send the message
       this->can_rx_pub.publish(this->can_rx_msg);
-      //NODELET_INFO("frame received");
+
+      NODELET_INFO("frame received:%d",++_packet_received);
   }
   
-  void UsbCanNode::canTxCallback(const can_msgs::CanFrame::ConstPtr &msg)
+  void UsbCanNode::canTxCallback(const can_msgs::Frame::ConstPtr &msg)
   {
       std::lock_guard<std::mutex> _lock(this->_mtx);
   
@@ -599,7 +600,7 @@ namespace can_plugins{
   
     if(!nh_priv.getParam("baud", _baud))
     {
-        _baud = 500000;
+        _baud = 1000000;
         //NODELET_ERROR("value for parameter baud is invalid.");
         //exit(-1);
     }
@@ -607,6 +608,7 @@ namespace can_plugins{
     if(!nh_priv.getParam("baud_uart", _baud_uart))
     {
         _baud_uart = 921600;
+        // _baud_uart = 2250000;
         //NODELET_ERROR("value for parameter baud_uart is invalid.");
         //exit(-1);
     }
@@ -619,13 +621,13 @@ namespace can_plugins{
     this->_read_strand = new boost::asio::strand(*_io);
     this->_write_strand = new boost::asio::strand(*_io);
   
-    this->can_rx_pub = _nh.advertise<can_msgs::CanFrame>("can_rx", 1);
+    this->can_rx_pub = _nh.advertise<can_msgs::Frame>("can_rx", 1000);
 
     // 2 threads for read/write
     this->_service_threads.create_thread(boost::bind((std::size_t (boost::asio::io_service::*)())&boost::asio::io_service::run, _io));
     this->_service_threads.create_thread(boost::bind((std::size_t (boost::asio::io_service::*)())&boost::asio::io_service::run, _io));
   
-    this->can_tx_sub = _nh.subscribe<can_msgs::CanFrame>("can_tx", 10, &UsbCanNode::canTxCallback, this);
+    this->can_tx_sub = _nh.subscribe<can_msgs::Frame>("can_tx", 1000, &UsbCanNode::canTxCallback, this);
   
     //this->can_rx_thread = new std::thread(&UsbCanNode::canRxTask, this);
   
@@ -646,7 +648,7 @@ namespace can_plugins{
   
     NODELET_INFO("initialized");
   
-    while(this->SetBaudRate(500000) && ros::ok())
+    while(this->SetBaudRate(_baud) && ros::ok())
     {
         NODELET_ERROR("failed to set baud rate.retrying evert second");
         ros::Duration(1).sleep();

@@ -208,3 +208,11 @@ target_link_libraries(${PROJECT_NAME}
 
 ## Add folders to be run by python nosetests
 # catkin_add_nosetests(test)
+
+#add_executable(usb_can_node_ src/usb_can_node_.cpp)
+#target_link_libraries(usb_can_node_ ${catkin_LIBRARIES})
+#add_dependencies(usb_can_node_ ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+
+add_executable(ping src/ping.cpp)
+target_link_libraries(ping ${catkin_LIBRARIES})
+add_dependencies(ping ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
