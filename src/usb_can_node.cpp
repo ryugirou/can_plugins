@@ -425,7 +425,7 @@ namespace can_plugins{
       // send the message
       this->can_rx_pub.publish(this->can_rx_msg);
 
-      NODELET_INFO("frame received:%d",++_packet_received);
+    //   NODELET_INFO("frame received:%d",++_packet_received);
   }
   
   void UsbCanNode::canTxCallback(const can_msgs::Frame::ConstPtr &msg)
@@ -568,6 +568,7 @@ namespace can_plugins{
               if(_rx_str_len > RX_STR_SIZE)
               {
                   NODELET_ERROR("eww");
+                  _rx_str_len = 0;
               }
           }
       }
