@@ -117,8 +117,8 @@ namespace can_plugins{
       static constexpr uint16_t id_baseOdomY              = 0x206;
       static constexpr uint16_t id_baseOdomYaw            = 0x207;
       static constexpr uint16_t id_solenoid            = 0x100;
-      static constexpr uint16_t id_test_tx=0x4b0;
-      static constexpr uint16_t id_test_rx=0x4b3;
+      static constexpr uint16_t id_test_tx=0x4d8;
+      static constexpr uint16_t id_test_rx=0x4db;
 
       int id_beta[BETA];
   };

@@ -27,3 +27,10 @@ launchファイルでの使い方
     <remap from="beta/motor3_cmd_vel" to="base/motor3_cmd_vel"/>
   </node>
 ```
+
+/etc/udev/rules.d/60-usbcan.rules
+```/etc/udev/rules.d/60-usbcan.rules
+
+  SUBSYSTEMS=="usb",KERNEL=="ttyACM[0-9]*" ,ATTRS{idVendor}=="0483", ATTRS{idProduct}=="5740",MODE:="0666",SYMLINK+="usbcan%n"
+
+```
