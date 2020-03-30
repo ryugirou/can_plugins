@@ -76,7 +76,9 @@ namespace can_plugins{
       void betamotor6CmdVelCallback(const std_msgs::Float64::ConstPtr& msg);    
       void betamotor7CmdVelCallback(const std_msgs::Float64::ConstPtr& msg);    
       void betamotor8CmdVelCallback(const std_msgs::Float64::ConstPtr& msg);    
-      void betamotor9CmdVelCallback(const std_msgs::Float64::ConstPtr& msg);    
+      void betamotor9CmdVelCallback(const std_msgs::Float64::ConstPtr& msg);
+
+      void betamotor4CmdSwingCallback(const std_msgs::Float64::ConstPtr& msg);    
 
       void solenoidOrderCallback(const std_msgs::UInt8::ConstPtr& msg);
 
@@ -96,6 +98,8 @@ namespace can_plugins{
       ros::Publisher  _base_odom_y_pub;
       ros::Publisher  _base_odom_yaw_pub;
 
+      ros::Publisher _limit_switch_pub;
+
       ros::Publisher  _test_pub;
       ros::Subscriber _test_sub;
 
@@ -111,6 +115,8 @@ namespace can_plugins{
       ros::Subscriber _beta_motor8_cmd_vel_sub;
       ros::Subscriber _beta_motor9_cmd_vel_sub;
 
+      ros::Subscriber _beta_motor4_cmd_swing_sub;
+
       ros::Subscriber _solenoid_order_sub;
 
       static constexpr uint16_t id_baseOdomX              = 0x205;
@@ -119,6 +125,8 @@ namespace can_plugins{
       static constexpr uint16_t id_solenoid            = 0x100;
       static constexpr uint16_t id_test_tx=0x4d8;
       static constexpr uint16_t id_test_rx=0x4db;
+
+      static constexpr uint16_t id_limit = 0x7fd;
 
       int id_beta[BETA];
   };
@@ -137,6 +145,8 @@ namespace can_plugins{
     _base_odom_y_pub		    = _nh.advertise<std_msgs::Float32>("base/odom/y", 1);
     _base_odom_yaw_pub		    = _nh.advertise<std_msgs::Float32>("base/odom/yaw", 1);
 
+    _limit_switch_pub = _nh.advertise<std_msgs::UInt8>("limit_switch",10);
+
     _test_pub = _nh.advertise<std_msgs::UInt8>("test_rx",1000);
     _test_sub = _nh.subscribe<std_msgs::UInt8>("test_tx",1000,&CanHandler::TestTxCallback,this);
 
@@ -153,6 +163,8 @@ namespace can_plugins{
     _beta_motor7_cmd_vel_sub	= _nh.subscribe<std_msgs::Float64>("beta/motor7_cmd_vel", 1000, &CanHandler::betamotor7CmdVelCallback, this);
     _beta_motor8_cmd_vel_sub	= _nh.subscribe<std_msgs::Float64>("beta/motor8_cmd_vel", 1000, &CanHandler::betamotor8CmdVelCallback, this);
     _beta_motor9_cmd_vel_sub	= _nh.subscribe<std_msgs::Float64>("beta/motor9_cmd_vel", 1000, &CanHandler::betamotor9CmdVelCallback, this);
+
+    _beta_motor4_cmd_swing_sub = _nh.subscribe<std_msgs::Float64>("beta/motor4_cmd_swing", 1000, &CanHandler::betamotor4CmdSwingCallback, this);
 
     _solenoid_order_sub = _nh.subscribe<std_msgs::UInt8>("solenoid", 1000, &CanHandler::solenoidOrderCallback, this);
 
@@ -217,6 +229,11 @@ namespace can_plugins{
     this->sendData(id_beta[9]+1, (float)(msg->data));
   }
 
+  void CanHandler::betamotor4CmdSwingCallback(const std_msgs::Float64::ConstPtr& msg)
+  {
+    this->sendData(id_beta[4]+2, (float)(msg->data));
+  }
+
   void CanHandler::solenoidOrderCallback(const std_msgs::UInt8::ConstPtr& msg)
   {
     this->sendData(id_solenoid+1, msg->data);
@@ -234,6 +251,7 @@ namespace can_plugins{
     std_msgs::Float32 _base_odom_yaw_msg;
 
     std_msgs::UInt8 _test_msg;
+    std_msgs::UInt8 _limit_switch_msg;
 
     switch(msg->id)
     {
@@ -255,6 +273,11 @@ namespace can_plugins{
       case id_test_rx:
         can_unpack(msg->data, _test_msg.data);
         _test_pub.publish(_test_msg);
+        break;
+
+      case id_limit:
+        can_unpack(msg->data,_limit_switch_msg.data);
+        _limit_switch_pub.publish(_limit_switch_msg);
         break;
       default:
         break;
