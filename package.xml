@@ -52,8 +52,10 @@
   <depend>nodelet</depend>
   <depend>pluginlib</depend>
   <depend>roscpp</depend>
-  <depend>can_msgs</depend>
+  <depend>message_generation</depend>
+  <depend>message_runtime</depend>
   <depend>std_msgs</depend>
+  <depend>jsk_rviz_plugins</depend>
 
 
   <!-- The export tag contains other, unspecified, tags -->

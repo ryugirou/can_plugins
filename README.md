@@ -34,3 +34,6 @@ launchファイルでの使い方
   SUBSYSTEMS=="usb",KERNEL=="ttyACM[0-9]*" ,ATTRS{idVendor}=="0483", ATTRS{idProduct}=="5740",MODE:="0666",SYMLINK+="usbcan%n"
 
 ```
+```
+udevadm control --reload-rules && udevadm trigger
+```

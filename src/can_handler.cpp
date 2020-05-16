@@ -13,7 +13,7 @@
 
 #include <boost/array.hpp>
 
-#include <can_msgs/Frame.h>
+#include <can_plugins/Frame.h>
 
 #define CAN_MTU 8
 #define BETA 10
@@ -82,7 +82,7 @@ namespace can_plugins{
 
       void solenoidOrderCallback(const std_msgs::UInt8::ConstPtr& msg);
 
-      void canRxCallback(const can_msgs::Frame::ConstPtr &msg);
+      void canRxCallback(const can_plugins::Frame::ConstPtr &msg);
 
       void TestTxCallback(const std_msgs::UInt8::ConstPtr &msg);
 
@@ -127,6 +127,7 @@ namespace can_plugins{
       static constexpr uint16_t id_test_rx=0x4db;
 
       static constexpr uint16_t id_limit = 0x7fd;
+      static constexpr uint16_t id_photo = 0x777;
 
       int id_beta[BETA];
   };
@@ -139,7 +140,7 @@ namespace can_plugins{
       pnh.param<int>("beta" + std::to_string(i) , id_beta[i], 0x700 + i);
     }
 
-    _can_tx_pub				    = _nh.advertise<can_msgs::Frame>("can_tx", 1000);
+    _can_tx_pub				    = _nh.advertise<can_plugins::Frame>("can_tx", 1000);
 
     _base_odom_x_pub		    = _nh.advertise<std_msgs::Float32>("base/odom/x", 1);
     _base_odom_y_pub		    = _nh.advertise<std_msgs::Float32>("base/odom/y", 1);
@@ -150,7 +151,7 @@ namespace can_plugins{
     _test_pub = _nh.advertise<std_msgs::UInt8>("test_rx",1000);
     _test_sub = _nh.subscribe<std_msgs::UInt8>("test_tx",1000,&CanHandler::TestTxCallback,this);
 
-    _can_rx_sub				    = _nh.subscribe<can_msgs::Frame>("can_rx", 1000, &CanHandler::canRxCallback, this);
+    _can_rx_sub				    = _nh.subscribe<can_plugins::Frame>("can_rx", 1000, &CanHandler::canRxCallback, this);
 
     _beta_cmd_sub	        = _nh.subscribe<std_msgs::UInt8>("beta/cmd", 10, &CanHandler::betaCmdCallback, this);
     _beta_motor0_cmd_vel_sub	= _nh.subscribe<std_msgs::Float64>("beta/motor0_cmd_vel", 1, &CanHandler::betamotor0CmdVelCallback, this);
@@ -244,7 +245,7 @@ namespace can_plugins{
     this->sendData(id_test_tx,msg->data);
   }
 
-  void CanHandler::canRxCallback(const can_msgs::Frame::ConstPtr &msg)
+  void CanHandler::canRxCallback(const can_plugins::Frame::ConstPtr &msg)
   {
     std_msgs::Float32 _base_odom_x_msg;
     std_msgs::Float32 _base_odom_y_msg;
@@ -279,6 +280,11 @@ namespace can_plugins{
         can_unpack(msg->data,_limit_switch_msg.data);
         _limit_switch_pub.publish(_limit_switch_msg);
         break;
+
+      case id_photo:
+        can_unpack(msg->data,_limit_switch_msg.data);
+        _limit_switch_pub.publish(_limit_switch_msg);
+        break;
       default:
         break;
     }
@@ -287,7 +293,7 @@ namespace can_plugins{
   template<typename T>
     void CanHandler::sendData(const uint16_t id, const T data)
     {
-      can_msgs::Frame frame;
+      can_plugins::Frame frame;
       frame.id = id;
       frame.is_rtr = false;
       frame.is_extended = false;
