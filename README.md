@@ -28,12 +28,9 @@ launchファイルでの使い方
   </node>
 ```
 
-/etc/udev/rules.d/60-usbcan.rules
-```/etc/udev/rules.d/60-usbcan.rules
-
-  SUBSYSTEMS=="usb",KERNEL=="ttyACM[0-9]*" ,ATTRS{idVendor}=="0483", ATTRS{idProduct}=="5740",MODE:="0666",SYMLINK+="usbcan%n"
-
+## Install
+udevファイルをコピーする
 ```
-```
-udevadm control --reload-rules && udevadm trigger
+sudo cp ~/catkin_ws/src/robot/can_plugins/udev/60-usbcan.rules /etc/udev/rules.d/60-usbcan.rules
+sudo udevadm control --reload-rules && udevadm trigger
 ```
