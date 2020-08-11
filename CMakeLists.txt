@@ -50,3 +50,6 @@ add_dependencies(${PROJECT_NAME} ${TARGET_NAME} ${catkin_EXPORTED_TARGETS})
 target_link_libraries(${PROJECT_NAME}
   ${catkin_LIBRARIES}
 )
+
+add_executable(solenoid_driver_node src/solenoid_driver_node.cpp)
+target_link_libraries(solenoid_driver_node ${catkin_LIBRARIES})
