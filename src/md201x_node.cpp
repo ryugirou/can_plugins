@@ -85,7 +85,7 @@ namespace can_plugins{
 
         NODELET_INFO("md201x node has started.");
         
-        this->name = ros::this_node::getName();
+        this->name = this->getName();
 
         _private_nh.getParam("bid", this->bid);
 
@@ -109,6 +109,14 @@ namespace can_plugins{
         else
         {
             _motor_cmd_val_sub = _nh.subscribe<std_msgs::Float64>(name + "_cmd_val", 10, &Md201xNode::motorCmdValCallback, this);
+        }
+
+        if(_private_nh.hasParam("swing"))
+        {
+            uint16_t id_motor_swing = id_motor_cmd + 2;
+            ros::Subscriber motor_cmd_swing_sub = _nh.subscribe<std_msgs::Float64>(name + "_cmd_swing", 10,[&](const std_msgs::Float64::ConstPtr &msg){
+                _can_tx_pub.publish(get_frame(id_motor_swing,msg->data));
+            });
         }
     }
 }// namespace can_plugins
