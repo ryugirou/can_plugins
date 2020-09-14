@@ -27,6 +27,7 @@ namespace can_plugins{
     private:
         void motorCmdCallback(const std_msgs::UInt8::ConstPtr &msg);
         void motorCmdValCallback(const std_msgs::Float64::ConstPtr &msg);
+        void motorCmdSwingCallback(const std_msgs::Float64::ConstPtr &msg);
 
         void canRxCallback(const can_plugins::Frame::ConstPtr &msg);
 
@@ -38,11 +39,15 @@ namespace can_plugins{
         ros::Publisher _motor_status_pub;
         ros::Subscriber _motor_cmd_sub;
         ros::Subscriber _motor_cmd_val_sub;
+        ros::Subscriber _motor_cmd_swing_sub;
 
         std::string bid;
         uint16_t id_motor_cmd;
         uint16_t id_motor_cmd_val;
+        uint16_t id_motor_cmd_swing;
         uint16_t id_motor_status;
+
+        bool _swing;
 
         std::string name;
 
@@ -61,6 +66,11 @@ namespace can_plugins{
     void Md201xNode::motorCmdValCallback(const std_msgs::Float64::ConstPtr &msg)
     {
         _can_tx_pub.publish(get_frame(id_motor_cmd_val, (float)msg->data));
+    }
+
+    void Md201xNode::motorCmdSwingCallback(const std_msgs::Float64::ConstPtr &msg)
+    {
+        _can_tx_pub.publish(get_frame(id_motor_cmd_swing, (float)msg->data));
     }
 
     void Md201xNode::canRxCallback(const can_plugins::Frame::ConstPtr &msg)
@@ -92,6 +102,7 @@ namespace can_plugins{
         this->id_motor_cmd = std::strtol(this->bid.c_str(), NULL, 16);
         this->id_motor_cmd_val = this->id_motor_cmd + 1;
         this->id_motor_status = this->id_motor_cmd + 3;
+        this->id_motor_cmd_swing = this->id_motor_cmd + 2;
 
         _can_tx_pub = _nh.advertise<can_plugins::Frame>("can_tx", 10);
         _can_rx_sub = _nh.subscribe<can_plugins::Frame>("can_rx", 10, &Md201xNode::canRxCallback, this);
@@ -111,12 +122,10 @@ namespace can_plugins{
             _motor_cmd_val_sub = _nh.subscribe<std_msgs::Float64>(name + "_cmd_val", 10, &Md201xNode::motorCmdValCallback, this);
         }
 
-        if(_private_nh.hasParam("swing"))
+        if(_private_nh.getParam("swing",_swing))
         {
-            uint16_t id_motor_swing = id_motor_cmd + 2;
-            ros::Subscriber motor_cmd_swing_sub = _nh.subscribe<std_msgs::Float64>(name + "_cmd_swing", 10,[&](const std_msgs::Float64::ConstPtr &msg){
-                _can_tx_pub.publish(get_frame(id_motor_swing,msg->data));
-            });
+            NODELET_INFO("swing mode");
+            _motor_cmd_swing_sub = _nh.subscribe<std_msgs::Float64>(name + "_cmd_swing", 10,&Md201xNode::motorCmdSwingCallback,this);
         }
     }
 }// namespace can_plugins
